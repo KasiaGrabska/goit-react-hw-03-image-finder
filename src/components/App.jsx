@@ -1,57 +1,72 @@
-import axios from 'axios';
 import { useState } from 'react';
+import styles from '../styles/app.module.css';
 import { Button } from './Button';
-import { ImageGalleryItem } from './ImageGalerryItem';
 import { ImageGallery } from './ImageGallery';
 import { Loader } from './Loader';
 import { Modal } from './Modal';
 import { Searchbar } from './Searchbar';
 
-export const App = () => {
-  const apiKey = '42409060-380322e351fb08456a6a2d09f';
-  const [images, setImages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
+const API_KEY = '42409060-380322e351fb08456a6a2d09f';
 
-  const onSubmit = async query => {
-    setIsLoading(true);
+export const App = () => {
+  const [query, setQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalImageUrl, setModalImageUrl] = useState('');
+
+  const handleSubmit = async query => {
+    setQuery(query);
+    setImages([]);
+    setLoading(true);
     try {
-      const response = await axios.get(
-        `https://pixabay.com/api/?q=${query}&page=1&key=${apiKey}&image_type=photo&orientation=horizontal&per_page=12`
+      const response = await fetch(
+        `https://pixabay.com/api/?q=${query}&page=1&key=${API_KEY}&image_type=photo&orientation=horizontal&per_page=12`
       );
-      setImages(response.data.hits);
+      const data = await response.json();
+      setImages(data.hits);
     } catch (error) {
       console.error('Error fetching images:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const openModal = imageUrl => {
-    setSelectedImage(imageUrl);
+  const handleLoadMore = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://pixabay.com/api/?q=${query}&page=${
+          Math.floor(images.length / 12) + 1
+        }&key=${API_KEY}&image_type=photo&orientation=horizontal&per_page=12`
+      );
+      const data = await response.json();
+      setImages(prevImages => [...prevImages, ...data.hits]);
+    } catch (error) {
+      console.error('Error fetching more images:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageClick = imageUrl => {
+    setModalImageUrl(imageUrl);
   };
 
   const closeModal = () => {
-    setSelectedImage(null);
+    setModalImageUrl('');
   };
 
   return (
-    <div>
-      <Searchbar onSubmit={onSubmit} />
-      <ImageGallery>
-        {images.map(image => (
-          <ImageGalleryItem
-            key={image.id}
-            src={image.webformatURL}
-            onClick={() => openModal(image.largeImageURL)}
-          />
-        ))}
-      </ImageGallery>
-      {isLoading && <Loader />}
-      {selectedImage && (
-        <Modal src={selectedImage} alt="Selected Image" onClose={closeModal} />
+    <div className={styles.app}>
+      <Searchbar onSubmit={handleSubmit} />
+      {loading && <Loader />}
+      {images.length > 0 && (
+        <>
+          <ImageGallery images={images} onImageClick={handleImageClick} />
+          <Button onClick={handleLoadMore}>Load more</Button>
+        </>
       )}
-      {images.length > 0 && !isLoading && <Button onClick={onSubmit} />}
+      {modalImageUrl && <Modal imageUrl={modalImageUrl} onClose={closeModal} />}
     </div>
   );
 };

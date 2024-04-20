@@ -1,8 +1,12 @@
 import styles from '../styles/imageGallery.module.css';
-export const ImageGallery = ({ children }) => {
+import { ImageGalleryItem } from './ImageGalerryItem';
+
+export const ImageGallery = ({ images, onImageClick }) => {
   return (
-    <>
-      <ul className={styles.gallery}>{children}</ul>
-    </>
+    <ul className={styles.gallery}>
+      {images.map(image => (
+        <ImageGalleryItem key={image.id} image={image} onClick={onImageClick} />
+      ))}
+    </ul>
   );
 };
